@@ -1,0 +1,22 @@
+[
+  {"id":"E01","position":"店长","skills":["店长值守","饮品制作","收银","库存管理"],"available_days":["周一","周二","周三","周四","周五","周六","周日"],"leave_days":["周三"],"preferred_shift":"早班"},
+  {"id":"E02","position":"副店长","skills":["店长值守","饮品制作","收银"],"available_days":["周一","周二","周三","周四","周五","周六","周日"],"leave_days":[],"preferred_shift":"晚班"},
+  {"id":"E03","position":"值班主管","skills":["店长值守","饮品制作","收银"],"available_days":["周一","周二","周三","周四","周五"],"leave_days":[],"preferred_shift":null},
+  {"id":"E04","position":"值班主管","skills":["店长值守","饮品制作","库存管理"],"available_days":["周三","周四","周五","周六","周日"],"leave_days":[],"preferred_shift":"早班"},
+  {"id":"E05","position":"高级店员","skills":["店长值守","饮品制作","收银"],"available_days":["周五","周六","周日"],"leave_days":[],"preferred_shift":"晚班"},
+  {"id":"E06","position":"店员","skills":["饮品制作","收银"],"available_days":["周一","周二","周三","周四","周五","周六","周日"],"leave_days":["周二"],"preferred_shift":"早班"},
+  {"id":"E07","position":"店员","skills":["饮品制作","收银"],"available_days":["周一","周二","周三","周四","周五","周六","周日"],"leave_days":[],"preferred_shift":"晚班"},
+  {"id":"E08","position":"店员","skills":["饮品制作","收银","库存管理"],"available_days":["周一","周二","周三","周四","周五","周六"],"leave_days":[],"preferred_shift":null},
+  {"id":"E09","position":"店员","skills":["饮品制作"],"available_days":["周一","周三","周五","周六","周日"],"leave_days":[],"preferred_shift":"早班"},
+  {"id":"E10","position":"店员","skills":["饮品制作","收银"],"available_days":["周二","周三","周四","周五","周六","周日"],"leave_days":[],"preferred_shift":null},
+  {"id":"E11","position":"店员","skills":["收银","库存管理"],"available_days":["周一","周二","周三","周四","周五","周六","周日"],"leave_days":[],"preferred_shift":"晚班"},
+  {"id":"E12","position":"店员","skills":["饮品制作","收银"],"available_days":["周一","周二","周三","周四","周五"],"leave_days":[],"preferred_shift":"早班"},
+  {"id":"E13","position":"兼职","skills":["饮品制作"],"available_days":["周六","周日"],"leave_days":[],"preferred_shift":"早班"},
+  {"id":"E14","position":"兼职","skills":["饮品制作","收银"],"available_days":["周六","周日"],"leave_days":[],"preferred_shift":"晚班"},
+  {"id":"E15","position":"兼职","skills":["收银"],"available_days":["周五","周六","周日"],"leave_days":[],"preferred_shift":null},
+  {"id":"E16","position":"兼职","skills":["饮品制作"],"available_days":["周三","周四","周六","周日"],"leave_days":[],"preferred_shift":null},
+  {"id":"E17","position":"店员","skills":["饮品制作","收银","库存管理"],"available_days":["周一","周二","周三","周四","周五","周六","周日"],"leave_days":["周一"],"preferred_shift":null},
+  {"id":"E18","position":"店员","skills":["饮品制作","收银"],"available_days":["周一","周二","周三","周四","周五"],"leave_days":[],"preferred_shift":"晚班"},
+  {"id":"E19","position":"兼职","skills":["饮品制作","收银"],"available_days":["周六","周日"],"leave_days":[],"preferred_shift":null},
+  {"id":"E20","position":"店员","skills":["饮品制作","库存管理"],"available_days":["周二","周三","周四","周五","周六","周日"],"leave_days":["周四"],"preferred_shift":"早班"}
+]

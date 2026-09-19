@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+import json
+import urllib.error
+import urllib.request
+from pathlib import Path
+from typing import Any
+
+
+from llm_client import REQUEST_SCHEMA, SYSTEM_INSTRUCTIONS
+
+
+BASE_DIR = Path(__file__).resolve().parent
+KEY_FILE = BASE_DIR / "deepseek_key.txt"
+API_URL = "https://api.deepseek.com/responses"
+MODEL = "deepseek-flash"
+
+
+class DeepSeekError(RuntimeError):
+    pass
+
+
+def read_api_key() -> str:
+    if not KEY_FILE.exists():
+        raise DeepSeekError("尚未配置 DeepSeek API Key")
+    key = KEY_FILE.read_text(encoding="utf-8").strip()
+    if not key or "粘贴" in key or "your_" in key.lower():
+        raise DeepSeekError("deepseek_key.txt 中没有有效的 API Key")
+    if "\n" in key or "\r" in key:
+        raise DeepSeekError("API Key 文件只能包含一行密钥")
+    return key
+
+
+def is_configured() -> bool:
+    try:
+        read_api_key()
+        return True
+    except DeepSeekError:
+        return False
+
+
+def _extract_output_text(response: dict[str, Any]) -> str:
+    texts: list[str] = []
+    for item in response.get("output", []):
+        if item.get("type") != "message":
+            continue
+        for content in item.get("content", []):
+            if content.get("type") == "output_text" and isinstance(content.get("text"), str):
+                texts.append(content["text"])
+    if not texts:
+        raise DeepSeekError("DeepSeek 响应中没有可用文本")
+    return "".join(texts)
+
+
+def interpret(user_text: str) -> dict[str, Any]:
+    payload = {
+        "model": MODEL,
+        "instructions": SYSTEM_INSTRUCTIONS,
+        "input": user_text,
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "schedule_request",
+                "schema": REQUEST_SCHEMA,
+            }
+        },
+        "temperature": 0.2,
+        "max_output_tokens": 1000,
+    }
+    request = urllib.request.Request(
+        API_URL,
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {read_api_key()}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=40) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")[:500]
+        raise DeepSeekError(f"DeepSeek API 返回 HTTP {error.code}：{detail}") from error
+    except (urllib.error.URLError, TimeoutError) as error:
+        raise DeepSeekError(f"无法连接 DeepSeek API：{error}") from error
+
+    try:
+        parsed = json.loads(_extract_output_text(response_data))
+    except json.JSONDecodeError as error:
+        raise DeepSeekError("DeepSeek 未返回合法 JSON") from error
+    parsed["original_text"] = user_text
+    parsed["source"] = "deepseek"
+    parsed["model"] = MODEL
+    return parsed

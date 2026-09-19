@@ -1,0 +1,23 @@
+{
+  "schedule": {
+    "days": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+    "shifts": {"早班": "09:00–17:00", "晚班": "13:00–21:00"},
+    "max_shifts_per_employee_per_day": 1
+  },
+  "hard_rules": [
+    {"id":"R-01","description":"每个班至少1名具备店长值守资格的员工","scope":"shift","skill":"店长值守","minimum":1},
+    {"id":"R-02","description":"每个班至少2名具备饮品制作技能的员工","scope":"shift","skill":"饮品制作","minimum":2},
+    {"id":"R-03","description":"每个班至少1名具备收银技能的员工","scope":"shift","skill":"收银","minimum":1},
+    {"id":"R-04","description":"工作日每班至少4人，周末每班至少6人","scope":"shift","weekday_minimum":4,"weekend_minimum":6},
+    {"id":"R-05","description":"每人每周最多40小时，即最多5个班","scope":"employee_week","maximum_hours":40,"maximum_shifts":5},
+    {"id":"R-06","description":"不得连续工作超过5天","scope":"employee_days","maximum_consecutive_days":5},
+    {"id":"R-07","description":"上一天晚班后不得安排次日早班","scope":"employee_days","forbidden_transition":["晚班","早班"]},
+    {"id":"R-08","description":"请假和不可工作日期绝对不得排班","scope":"employee_day"},
+    {"id":"R-09","description":"技能必须来自员工数据，Agent不得自行补技能","scope":"data"}
+  ],
+  "soft_objectives": [
+    "尽量满足员工班次偏好",
+    "尽量平衡员工班次数量",
+    "尽量避免关键岗位长期集中在少数员工身上"
+  ]
+}
