@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepSeek 可解释排班 Agent</title>
+  <style>
+    :root{--ink:#172033;--muted:#69758c;--line:#dce3ef;--brand:#4b55d8;--soft:#eef0ff;--ok:#087a51;--bad:#b42318;--warn:#946200}
+    *{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:"Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#eef3ff,#f7f2ff);min-height:100vh}main{width:min(1180px,calc(100% - 28px));margin:auto;padding:34px 0 60px}h1{font-size:42px;margin:8px 0}.muted{color:var(--muted);line-height:1.7}.badge{display:inline-flex;gap:7px;align-items:center;padding:7px 11px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:13px}.dot{width:8px;height:8px;border-radius:50%;background:#e6a700}.dot.on{background:#10a56c}.panel{margin-top:22px;padding:22px;border-radius:20px;background:rgba(255,255,255,.94);box-shadow:0 20px 55px #31416a1c}
+    .mode-row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:15px}.mode-switch{display:inline-grid;grid-template-columns:repeat(3,1fr);padding:4px;border-radius:13px;background:#eef1f7;border:1px solid var(--line)}.mode-btn{border:0;border-radius:9px;padding:10px 16px;background:transparent;color:var(--muted);font-weight:700;cursor:pointer}.mode-btn.active{background:#fff;color:var(--brand);box-shadow:0 3px 12px #23325a18}.current-state{font-size:13px;color:var(--muted)}.current-state.ready{color:var(--ok);font-weight:700}
+    textarea{width:100%;min-height:112px;border:1px solid var(--line);border-radius:14px;padding:15px;font:inherit;line-height:1.6;resize:vertical}textarea:focus{outline:3px solid #4b55d81a;border-color:var(--brand)}.run-btn{margin-top:12px;border:0;border-radius:12px;padding:12px 18px;background:var(--brand);color:#fff;font-size:15px;font-weight:700;cursor:pointer}.run-btn:disabled{opacity:.55;cursor:wait}
+    .agent-note,.alert,.changes,.explanation{margin-top:16px;padding:13px 15px;border-radius:13px;border:1px solid var(--line);background:#f8faff}.alert.ok{color:var(--ok);background:#ebfaf3;border-color:#a9e3cb}.alert.bad{color:var(--bad);background:#fff1ef;border-color:#ffc6bd}.alert.warn{color:var(--warn);background:#fff9e8;border-color:#efd58d}.changes{background:var(--soft)}.changes ul,.explanation ul{margin:8px 0 0;padding-left:20px}.changes li,.explanation li{margin:5px 0}.explanation{background:#fff;border-left:4px solid var(--brand)}.explanation h3{margin:0 0 8px}.reason{padding:10px 0;border-top:1px dashed var(--line)}.reason:first-of-type{border-top:0}.reason strong{color:#3541ad}.evidence{margin-top:5px;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.metric,.rule{padding:13px;border:1px solid var(--line);border-radius:12px;background:#fff}.metric strong{display:block;font-size:25px;margin-top:4px}.metric span{font-size:13px;color:var(--muted)}.table{overflow:auto;border:1px solid var(--line);border-radius:13px}table{width:100%;min-width:850px;border-collapse:collapse;background:#fff}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:13px;color:#4d5870;background:#f7f9fd}.tag{display:inline-block;padding:3px 8px;margin:2px;border-radius:999px;background:#eef1ff;color:#3d48b7;font-size:12px}.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.rule{color:var(--ok)}h2{font-size:20px;margin-top:27px}
+    @media(max-width:760px){h1{font-size:32px}.grid,.rules{grid-template-columns:1fr}.panel{padding:15px}.mode-switch{width:100%;display:grid}.mode-row{display:block}.current-state{display:block;margin-top:10px}.mode-btn{padding:9px 6px}}
+  </style>
+</head>
+<body><main>
+  <div class="badge"><span id="dot" class="dot"></span><span id="api-mode">正在检查 DeepSeek 配置…</span></div>
+  <h1>可解释排班 Agent</h1>
+  <p class="muted">生成、追加和解释相互分离。解释模式只读取当前排班，永远不会修改表格。</p>
+  <section class="panel">
+    <div class="mode-row">
+      <div class="mode-switch" role="group" aria-label="Agent 模式">
+        <button class="mode-btn active" id="mode-new" type="button">从 0 排表</button>
+        <button class="mode-btn" id="mode-append" type="button">追加需求</button>
+        <button class="mode-btn" id="mode-explain" type="button">解释 / 提问</button>
+      </div>
+      <span id="current-state" class="current-state">当前没有排班表</span>
+    </div>
+    <textarea id="request">下周帮我排一个完整班表，尽量照顾大家的班次偏好，也别让工作量差得太多</textarea>
+    <button id="run" class="run-btn">生成全新排班</button>
+    <div id="message"></div>
+    <div id="result"><p class="muted">等待生成第一张排班表。</p></div>
+  </section>
+  <script>
+    const q=s=>document.querySelector(s),esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+    let activeMode='new',currentResult=null;
+    const examples={new:'下周帮我排一个完整班表，尽量照顾大家的班次偏好，也别让工作量差得太多',append:'在现有排班基础上，周三尽量不要安排 E07，其他班次尽量不变',explain:'为什么周三早班安排这些员工？请说明硬规则和偏好上的考虑'};
+    const labels={new:'生成全新排班',append:'在现有排班上应用需求',explain:'解释当前排班'};
+    fetch('/api/config').then(r=>r.json()).then(c=>{q('#dot').classList.toggle('on',c.enabled);q('#api-mode').textContent=c.enabled?`DeepSeek 已连接 · ${c.model}`:'尚未配置 API Key · 解释将使用有限降级信息'}).catch(()=>q('#api-mode').textContent='无法读取 DeepSeek 配置');
+    function setMode(mode){activeMode=mode;['new','append','explain'].forEach(x=>q(`#mode-${x}`).classList.toggle('active',x===mode));q('#run').textContent=labels[mode];q('#request').value=examples[mode];q('#message').innerHTML='';if(mode!=='new'&&!currentResult)q('#message').innerHTML='<div class="alert warn">请先生成一张排班表。</div>'}
+    ['new','append','explain'].forEach(x=>q(`#mode-${x}`).onclick=()=>setMode(x));
+    function agentNote(a){return `<div class="agent-note"><strong>Agent 理解：</strong>${esc(a?.understanding||'未提供')}<br><span class="muted">处理方式：${a?.source==='llm'?`DeepSeek (${esc(a.model)})`:'本地降级'}${a?.warning?` · ${esc(a.warning)}`:''}</span></div>`}
+    function explanationHtml(exp,title='排班解释'){if(!exp)return'';const reasons=(exp.key_reasons||[]).map(r=>`<div class="reason"><strong>${esc(r.title)}</strong><div>${esc(r.detail)}</div>${r.evidence?.length?`<div class="evidence">依据：${r.evidence.map(esc).join('；')}</div>`:''}</div>`).join('');const tradeoffs=exp.tradeoffs?.length?`<div class="reason"><strong>取舍</strong><ul>${exp.tradeoffs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'';const limits=exp.limitations?.length?`<div class="reason"><strong>局限与边界</strong><ul>${exp.limitations.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'';return `<div class="explanation"><h3>${esc(title)}</h3><p>${esc(exp.answer)}</p>${reasons}${tradeoffs}${limits}<div class="evidence">只读回答：本次没有修改排班表${exp.warning?` · ${esc(exp.warning)}`:''}</div></div>`}
+    function showFailure(d){let html=agentNote(d.agent);if(d.needs_base_schedule)html+='<div class="alert warn">请先生成一张排班表。</div>';else if(d.needs_clarification)html+=`<div class="alert warn"><strong>需要补充信息：</strong>${esc(d.clarification_question)}</div>`;else html+=`<div class="alert bad"><strong>当前排班未改变：</strong>${esc(d.error||'处理失败')}</div>`;q('#message').innerHTML=html}
+    function renderSchedule(d){currentResult=d;q('#current-state').textContent=`已有排班 · ${d.statistics.total_shifts} 个班次 · 可追加或提问`;q('#current-state').classList.add('ready');let msg=agentNote(d.agent)+`<div class="alert ok">${d.mode==='append'?'已基于原表完成修改':'已生成全新排班'}，全部硬规则通过。</div>`;if(d.mode==='append')msg+=`<div class="changes"><strong>相对上一版的改动</strong><ul>${(d.changes||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${d.requirement_evidence?`<div class="evidence">需求验证：${esc(d.requirement_evidence)}</div>`:''}</div>`;q('#message').innerHTML=msg;const rows=d.schedule.map(x=>`<tr><td>${esc(x.day)}</td><td>${esc(x.shift)}</td><td>${esc(x.time)}</td><td>${x.employee_details.map(e=>`<span class="tag" title="${esc(e.skills.join('、'))}">${esc(e.id)} · ${esc(e.position)}</span>`).join('')}</td><td>${x.coverage['店长值守']}</td><td>${x.coverage['饮品制作']}</td><td>${x.coverage['收银']}</td></tr>`).join('');const rules=Object.entries(d.validation.rules).map(([id])=>`<div class="rule">✓ ${esc(id)} 通过</div>`).join('');q('#result').innerHTML=`<div class="grid"><div class="metric"><span>班次数</span><strong>${d.statistics.total_shifts}</strong></div><div class="metric"><span>人员安排</span><strong>${d.statistics.total_assignments}</strong></div><div class="metric"><span>规则通过</span><strong>9 / 9</strong></div></div><h2>当前排班表</h2><div class="table"><table><thead><tr><th>日期</th><th>班次</th><th>时间</th><th>员工</th><th>店长</th><th>饮品</th><th>收银</th></tr></thead><tbody>${rows}</tbody></table></div><h2>独立规则校验</h2><div class="rules">${rules}</div><div id="auto-explanation">${explanationHtml(d.explanation,'为什么这样安排')}</div>`}
+    function renderAnswer(d){q('#message').innerHTML=agentNote(d.agent)+`<div class="alert ok">已完成只读解释，当前排班表未发生变化。</div>${explanationHtml(d.explanation,'针对你的问题')}`}
+    q('#run').onclick=async()=>{const button=q('#run'),text=q('#request').value.trim();if(!text)return;if(activeMode!=='new'&&!currentResult){showFailure({needs_base_schedule:true,agent:{understanding:'该操作需要读取已有排班。'}});return}button.disabled=true;button.textContent=activeMode==='new'?'正在生成并解释…':activeMode==='append'?'正在修改、校验并解释…':'正在读取排班并解释…';q('#message').innerHTML='<p class="muted">DeepSeek 正在处理，Python 正在守护排班规则…</p>';try{const payload={mode:activeMode,request:text,current_schedule:currentResult?.schedule||[],current_request:currentResult?.request||{}};const response=await fetch('/api/agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok)throw Error(data.error||'请求失败');if(!data.success)showFailure(data);else if(data.mode==='explain')renderAnswer(data);else renderSchedule(data)}catch(error){q('#message').innerHTML=`<div class="alert bad">${esc(error.message)}</div>`}finally{button.disabled=false;button.textContent=labels[activeMode]}};
+  </script>
+</main></body></html>

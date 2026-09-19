@@ -24,7 +24,7 @@ def ensure_api_key() -> None:
 def main() -> None:
     ensure_api_key()
     sys.path.insert(0, str(DEEPSEEK_DIR))
-    from deepseek_app_v3 import main as run_server
+    from deepseek_app import main as run_server
 
     run_server()
 
