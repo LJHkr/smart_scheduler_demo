@@ -1,0 +1,4 @@
+.export-bar{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.export-title{font-weight:700}.export-hint{display:block;margin-top:3px;color:var(--muted);font-size:12px}
+.export-actions{display:flex;gap:9px;flex-wrap:wrap}.export-btn{border:1px solid var(--line);border-radius:10px;padding:9px 13px;background:#fff;color:var(--ink);font-weight:700;cursor:pointer}.export-btn:hover:not(:disabled){border-color:var(--brand);color:var(--brand);background:var(--soft)}.export-btn:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:700px){.export-actions,.export-btn{width:100%}}

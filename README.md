@@ -1,6 +1,6 @@
 # 智能排班 Agent（DSAgent）
 
-用户用自然语言描述需求，DeepSeek V4.1 Flash 负责理解和解释，Python 负责生成、修订并校验排班。所有结果必须通过 R-01～R-09。
+DeepSeek V4.1 Flash 负责理解、修订建议和解释；Python 负责生成并校验排班。系统支持从 0 排表、追加需求、只读解释，以及 Markdown/CSV 文件导出。
 
 ## 启动
 
@@ -12,61 +12,39 @@ python main.py
 
 首次启动时粘贴 DeepSeek API Key，然后访问 <http://127.0.0.1:8000>。
 
-Key 只保存在本机 `deepseek_agent/deepseek_key.txt`，并被 `.gitignore` 忽略。API 地址和模型已固定：
+Key 只保存在本机 `deepseek_agent/deepseek_key.txt`。API 地址和模型已经固定：
 
 - API：`https://api.deepseek.com/responses`
-- 模型：`deepseek-flash`，对应 DeepSeek V4.1 Flash
+- 模型：`deepseek-flash`
 
-## 三种 Agent 模式
+## 功能
 
-### 1. 从 0 排表
+### 从 0 排表
 
-根据当前输入生成全新排班，并自动输出“为什么这样安排”。
+根据自然语言生成全新排班，并自动解释硬规则、关键岗位、偏好及工作量取舍。
 
-示例：
+### 追加需求
 
-- “生成下周完整排班，尽量照顾员工偏好。”
-- “只生成周末的早晚班。”
-- “工作日只排早班，不考虑偏好。”
+在当前排班上做最少量修改。修订结果必须重新通过 R-01～R-09；失败时保留原表。
 
-### 2. 追加需求
+### 解释 / 提问
 
-将新要求应用到当前排班，优先做最少量修改，而不是重新随机生成整张表。
+只读取当前排班并回答问题，不修改表格。如果用户提出改表要求，Agent 会提示切换到“追加需求”。
 
-示例：
+### 文件导出
 
-- “周三尽量不要安排 E07，其他班次不变。”
-- “把 E06 的周一早班换给其他合规员工。”
-- “减少 E02 的晚班，但不能违反硬规则。”
+生成排班后，页面底部会启用两个按钮：
 
-处理流程：
+- **导出 Markdown**：包含用户需求、排班表、版本改动、R-01～R-09 校验、LLM 安排解释及 AI 工具使用记录，适合复制到飞书文档。
+- **导出 CSV**：包含日期、班次、时间、员工、人数、技能覆盖及校验结果，使用 UTF-8 BOM，适合 Excel、飞书表格或数据复核。
 
-1. DeepSeek 读取当前排班、员工数据和追加需求。
-2. 返回完整修订表，而不是局部片段。
-3. Python 重新检查 R-01～R-09。
-4. 首次违规时将错误反馈给 DeepSeek，并自动重试一次。
-5. 只有校验通过才替换当前表，否则保留原表。
-6. 页面展示相对上一版增加和移除了哪些员工，并解释修改原因。
+导出使用浏览器当前版本，不会重新调用 LLM，也不会改变排班。
 
-### 3. 解释 / 提问
+## 示例
 
-只读取当前排班并回答问题，绝不修改排班表。
-
-示例：
-
-- “为什么周三早班安排这些人？”
-- “E02 为什么有这么多晚班？”
-- “这张表怎样满足 R-07？”
-- “哪些员工的偏好没有满足，为什么？”
-
-解释内容包括：
-
-- 硬规则和关键岗位覆盖依据
-- 具体日期、班次及员工 ID 证据
-- 员工偏好与工作量之间的取舍
-- 当前结论的局限和信息边界
-
-如果用户在解释模式要求改表，Agent 会提示切换到“追加需求”，当前表保持不变。
+- 新建：“生成下周完整排班，尽量照顾员工偏好。”
+- 追加：“周三不要安排 E07，其他班次尽量不变。”
+- 解释：“为什么周三早班安排这些人？”
 
 ## 架构
 
@@ -77,35 +55,38 @@ Key 只保存在本机 `deepseek_agent/deepseek_key.txt`，并被 `.gitignore` �
   └─ 解释/提问  → 当前排班 + DeepSeek 只读解释
                                   ↓
                          R-01～R-09 独立校验
+                                  ↓
+                         Markdown / CSV 导出
 ```
-
-DeepSeek 不得自行添加员工技能或绕过规则。解释器与修改接口分离，解释请求没有写入排班的路径。
 
 ## 项目结构
 
 ```text
 smart_scheduler_demo/
-├── main.py                              # 唯一入口，启动可解释 DSAgent
+├── main.py                              # 唯一入口
 ├── README.md
 ├── scheduler.py                         # 排班生成与规则校验
 ├── data/
 │   ├── employees.json
 │   └── rules.json
 ├── static/
-│   └── agent_v3.html                    # 三模式 Web 页面
+│   ├── agent_v3.html                    # 三模式页面
+│   ├── export_tools.js                  # Markdown/CSV 生成与下载
+│   └── export_tools.css
 ├── deepseek_agent/
 │   ├── deepseek_app.py                  # 排班与追加核心
-│   ├── deepseek_app_v3.py               # 三模式 API 服务
-│   ├── deepseek_client.py               # 意图解析与排班修订
-│   ├── explanation_client.py            # 只读解释器
-│   └── deepseek_key.txt                  # 本机密钥
+│   ├── deepseek_app_v3.py               # 解释功能
+│   ├── deepseek_app_v4.py               # 导出功能与正式服务
+│   ├── deepseek_client.py
+│   └── explanation_client.py
 ├── tests/
 │   ├── test_scheduler.py
 │   ├── test_append_mode.py
-│   └── test_explanation_mode.py
+│   ├── test_explanation_mode.py
+│   └── test_export_ui.py
 ├── 排班规则.md
 ├── 员工名单.md
-└── legacy/                              # 可恢复的历史版本，不参与运行
+└── legacy/                              # 历史版本，不参与运行
 ```
 
 ## 核心规则
@@ -122,12 +103,13 @@ smart_scheduler_demo/
 
 ```powershell
 python -m unittest discover -s tests -v
+node --check static\export_tools.js
 ```
 
-现有 9 个测试覆盖：排班生成、规则违规检测、追加需求、自动修复重试、自动解释、无基础表拒绝解释，以及解释问答不修改排班。
+当前 10 个测试覆盖排班生成、违规检测、追加需求、自动修复、只读解释和导出资源。
 
 ## AI 工具使用记录
 
-- AI 辅助生成自然语言解析、Web Server、排班算法、修订流程、解释器、校验器、页面和测试。
+- AI 辅助生成自然语言解析、Web Server、排班算法、修订流程、解释器、导出工具和测试。
 - 员工数据来自题目图片转录，正式提交前应再次人工复核。
-- DeepSeek 负责理解、修订建议和解释，最终排班由确定性 Python 校验器把关。
+- DeepSeek 负责理解、修订建议和解释；最终排班由确定性 Python 校验器把关。
